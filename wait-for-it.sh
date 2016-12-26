@@ -9,7 +9,7 @@ usage()
 {
     cat << USAGE >&2
 Usage:
-    $cmdname host:port [-s] [-t timeout] [-- command args]
+    $cmdname (host:port|--url) [-s] [-t timeout] [-r timeout] [-- command args]
     -h HOST | --host=HOST       Host or IP under test
     -p PORT | --port=PORT       TCP port under test
                                 Alternatively, you specify the host and port as host:port
@@ -19,6 +19,8 @@ Usage:
     -q | --quiet                Don't output any status messages
     -t TIMEOUT | --timeout=TIMEOUT
                                 Timeout in seconds, zero for no timeout
+    -r TIMEOUT | --retry=TIMEOUT
+                                Wait TIMEOUT between retries (10 sec by default)
     -- COMMAND ARGS             Execute command with args after the test finishes
 USAGE
     exit 1
@@ -42,7 +44,7 @@ wait_for()
             break
         fi
         echoerr "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
-        sleep 1
+        sleep $RETRY_TIMEOUT
     done
     return $result
 }
@@ -65,7 +67,7 @@ wait_for_url()
             break
         fi
         echoerr "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
-        sleep 5
+        sleep $RETRY_TIMEOUT
     done
     return $result
 }
@@ -74,9 +76,9 @@ wait_for_wrapper()
 {
     # In order to support SIGINT during timeout: http://unix.stackexchange.com/a/57692
     if [[ $QUIET -eq 1 ]]; then
-        timeout $TIMEOUT $0 --quiet --child --url=$URL --host=$HOST --port=$PORT --timeout=$TIMEOUT &
+        timeout $TIMEOUT $0 --quiet --child --url=$URL --host=$HOST --port=$PORT --timeout=$TIMEOUT --retry=$RETRY_TIMEOUT &
     else
-        timeout $TIMEOUT $0 --child --url=$URL --host=$HOST --port=$PORT --timeout=$TIMEOUT &
+        timeout $TIMEOUT $0 --child --url=$URL --host=$HOST --port=$PORT --timeout=$TIMEOUT --retry=$RETRY_TIMEOUT &
     fi
     PID=$!
     trap "kill -INT -$PID" INT
@@ -152,6 +154,15 @@ do
         TIMEOUT="${1#*=}"
         shift 1
         ;;
+        -r)
+        RETRY_TIMEOUT="$2"
+        if [[ $RETRY_TIMEOUT == "" ]]; then break; fi
+        shift 2
+        ;;
+        --retry=*)
+        RETRY_TIMEOUT="${1#*=}"
+        shift 1
+        ;;
         --)
         shift
         CLI="$@"
@@ -177,8 +188,8 @@ else
     fi
 fi
 
-
 TIMEOUT=${TIMEOUT:-15}
+RETRY_TIMEOUT=${RETRY_TIMEOUT:-10}
 STRICT=${STRICT:-0}
 CHILD=${CHILD:-0}
 QUIET=${QUIET:-0}

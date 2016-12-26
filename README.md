@@ -9,7 +9,7 @@ Hi there!  I wrote `wait-for-it` in order to help me orchestrate containers I op
 ## Usage
 
 ```
-wait-for-it.sh host:port [-s] [-t timeout] [-- command args]
+wait-for-it.sh (host:port|--url) [-s] [-t timeout] [-r timeout] [-- command args]
 -h HOST | --host=HOST       Host or IP under test
 -p PORT | --port=PORT       TCP port under test
                             Alternatively, you specify the host and port as host:port
@@ -19,6 +19,8 @@ wait-for-it.sh host:port [-s] [-t timeout] [-- command args]
 -q | --quiet                Don't output any status messages
 -t TIMEOUT | --timeout=TIMEOUT
                             Timeout in seconds, zero for no timeout
+-r TIMEOUT | --retry=TIMEOUT
+                            Wait TIMEOUT between retries (10 sec by default)
 -- COMMAND ARGS             Execute command with args after the test finishes
 ```
 
