@@ -156,7 +156,6 @@ do
         ;;
         -r)
         RETRY_TIMEOUT="$2"
-        if [[ $RETRY_TIMEOUT == "" ]]; then break; fi
         shift 2
         ;;
         --retry=*)
@@ -193,6 +192,11 @@ RETRY_TIMEOUT=${RETRY_TIMEOUT:-10}
 STRICT=${STRICT:-0}
 CHILD=${CHILD:-0}
 QUIET=${QUIET:-0}
+
+if [[ $TIMEOUT && (! $RETRY_TIMEOUT || $RETRY_TIMEOUT -ge $TIMEOUT) ]]; then
+    echoerr "Error: Retry timeout must be less than $TIMEOUT"
+    usage
+fi
 
 if [[ $CHILD -gt 0 ]]; then
     if [[ $URL ]]; then
