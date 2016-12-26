@@ -13,6 +13,8 @@ Usage:
     -h HOST | --host=HOST       Host or IP under test
     -p PORT | --port=PORT       TCP port under test
                                 Alternatively, you specify the host and port as host:port
+    --url=http://domain.com/path/to/check
+                                URL that should return 200
     -s | --strict               Only execute subcommand if the test succeeds
     -q | --quiet                Don't output any status messages
     -t TIMEOUT | --timeout=TIMEOUT
@@ -39,7 +41,31 @@ wait_for()
             echoerr "$cmdname: $HOST:$PORT is available after $((end_ts - start_ts)) seconds"
             break
         fi
+        echoerr "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
         sleep 1
+    done
+    return $result
+}
+
+wait_for_url()
+{
+    if [[ $TIMEOUT -gt 0 ]]; then
+        echoerr "$cmdname: waiting $TIMEOUT seconds for $URL"
+    else
+        echoerr "$cmdname: waiting for $URL without a timeout"
+    fi
+    start_ts=$(date +%s)
+    while :
+    do
+        curl --output /dev/null --silent --head --fail --max-time 5 $URL
+        result=$?
+        if [[ $result -eq 0 ]]; then
+            end_ts=$(date +%s)
+            echoerr "$cmdname: $HOST:$PORT is available after $((end_ts - start_ts)) seconds"
+            break
+        fi
+        echoerr "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
+        sleep 5
     done
     return $result
 }
@@ -48,16 +74,20 @@ wait_for_wrapper()
 {
     # In order to support SIGINT during timeout: http://unix.stackexchange.com/a/57692
     if [[ $QUIET -eq 1 ]]; then
-        timeout $TIMEOUT $0 --quiet --child --host=$HOST --port=$PORT --timeout=$TIMEOUT &
+        timeout $TIMEOUT $0 --quiet --child --url=$URL --host=$HOST --port=$PORT --timeout=$TIMEOUT &
     else
-        timeout $TIMEOUT $0 --child --host=$HOST --port=$PORT --timeout=$TIMEOUT &
+        timeout $TIMEOUT $0 --child --url=$URL --host=$HOST --port=$PORT --timeout=$TIMEOUT &
     fi
     PID=$!
     trap "kill -INT -$PID" INT
     wait $PID
     RESULT=$?
     if [[ $RESULT -ne 0 ]]; then
-        echoerr "$cmdname: timeout occurred after waiting $TIMEOUT seconds for $HOST:$PORT"
+        if [[ $URL ]]; then
+            echoerr "$cmdname: timeout occurred after waiting $TIMEOUT seconds for $URL"
+        else
+            echoerr "$cmdname: timeout occurred after waiting $TIMEOUT seconds for $HOST:$PORT"
+        fi
     fi
     return $RESULT
 }
@@ -65,6 +95,12 @@ wait_for_wrapper()
 # process arguments
 while [[ $# -gt 0 ]]
 do
+    # Read below why URL is done as standalone IF instead of one more case
+    if [[ "$1" == --url=* ]] ; then
+        URL="${1#*=}"
+        shift 1
+    fi
+
     case "$1" in
         *:* )
         hostport=(${1//:/ })
@@ -93,6 +129,11 @@ do
         HOST="${1#*=}"
         shift 1
         ;;
+        # Fo some reason pattern doesn't work if value contains colon (:)
+        # --url=*)
+        # URL="${1#*=}"
+        # shift 1
+        # ;;
         -p)
         PORT="$2"
         if [[ $PORT == "" ]]; then break; fi
@@ -126,10 +167,16 @@ do
     esac
 done
 
-if [[ "$HOST" == "" || "$PORT" == "" ]]; then
-    echoerr "Error: you need to provide a host and port to test."
+if [[ ! $URL && ! $HOST ]]; then
+    echoerr "Error: you need to provide URL or host and port to test."
     usage
+else
+    if [[ ! $URL && (! $HOST || ! $PORT) ]]; then
+        echoerr "Error: you need to provide a host and port to test."
+        usage
+    fi
 fi
+
 
 TIMEOUT=${TIMEOUT:-15}
 STRICT=${STRICT:-0}
@@ -137,17 +184,18 @@ CHILD=${CHILD:-0}
 QUIET=${QUIET:-0}
 
 if [[ $CHILD -gt 0 ]]; then
-    wait_for
-    RESULT=$?
-    exit $RESULT
-else
-    if [[ $TIMEOUT -gt 0 ]]; then
-        wait_for_wrapper
+    if [[ $URL ]]; then
+        wait_for_url
         RESULT=$?
+        exit $RESULT
     else
         wait_for
         RESULT=$?
+        exit $RESULT
     fi
+else
+    wait_for_wrapper
+    RESULT=$?
 fi
 
 if [[ $CLI != "" ]]; then
