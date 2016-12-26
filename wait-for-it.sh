@@ -63,7 +63,7 @@ wait_for_url()
         result=$?
         if [[ $result -eq 0 ]]; then
             end_ts=$(date +%s)
-            echoerr "$cmdname: $HOST:$PORT is available after $((end_ts - start_ts)) seconds"
+            echoerr "$cmdname: $URL is available after $((end_ts - start_ts)) seconds"
             break
         fi
         echoerr "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
