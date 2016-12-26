@@ -124,7 +124,7 @@ do
         ;;
         -h)
         HOST="$2"
-        if [[ $HOST == "" ]]; then break; fi
+        if [[ ! $HOST ]]; then break; fi
         shift 2
         ;;
         --host=*)
@@ -138,7 +138,7 @@ do
         # ;;
         -p)
         PORT="$2"
-        if [[ $PORT == "" ]]; then break; fi
+        if [[ ! $PORT ]]; then break; fi
         shift 2
         ;;
         --port=*)
@@ -147,7 +147,7 @@ do
         ;;
         -t)
         TIMEOUT="$2"
-        if [[ $TIMEOUT == "" ]]; then break; fi
+        if [[ ! $TIMEOUT ]]; then break; fi
         shift 2
         ;;
         --timeout=*)
@@ -213,7 +213,7 @@ else
     RESULT=$?
 fi
 
-if [[ $CLI != "" ]]; then
+if [[ $CLI ]]; then
     if [[ $RESULT -ne 0 && $STRICT -eq 1 ]]; then
         echoerr "$cmdname: strict mode, refusing to execute subprocess"
         exit $RESULT
