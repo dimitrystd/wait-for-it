@@ -4,6 +4,7 @@
 cmdname=$(basename $0)
 
 echoerr() { if [[ $QUIET -ne 1 ]]; then echo "$@" 1>&2; fi }
+echoinfo() { if [[ $QUIET -ne 1 ]]; then echo "$@"; fi }
 
 usage()
 {
@@ -29,9 +30,9 @@ USAGE
 wait_for()
 {
     if [[ $TIMEOUT -gt 0 ]]; then
-        echoerr "$cmdname: waiting $TIMEOUT seconds for $HOST:$PORT"
+        echoinfo "$cmdname: waiting $TIMEOUT seconds for $HOST:$PORT"
     else
-        echoerr "$cmdname: waiting for $HOST:$PORT without a timeout"
+        echoinfo "$cmdname: waiting for $HOST:$PORT without a timeout"
     fi
     start_ts=$(date +%s)
     while :
@@ -40,10 +41,10 @@ wait_for()
         result=$?
         if [[ $result -eq 0 ]]; then
             end_ts=$(date +%s)
-            echoerr "$cmdname: $HOST:$PORT is available after $((end_ts - start_ts)) seconds"
+            echoinfo "$cmdname: $HOST:$PORT is available after $((end_ts - start_ts)) seconds"
             break
         fi
-        echoerr "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
+        echoinfo "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
         sleep $RETRY_TIMEOUT
     done
     return $result
@@ -52,9 +53,9 @@ wait_for()
 wait_for_url()
 {
     if [[ $TIMEOUT -gt 0 ]]; then
-        echoerr "$cmdname: waiting $TIMEOUT seconds for $URL"
+        echoinfo "$cmdname: waiting $TIMEOUT seconds for $URL"
     else
-        echoerr "$cmdname: waiting for $URL without a timeout"
+        echoinfo "$cmdname: waiting for $URL without a timeout"
     fi
     start_ts=$(date +%s)
     while :
@@ -63,10 +64,10 @@ wait_for_url()
         result=$?
         if [[ $result -eq 0 ]]; then
             end_ts=$(date +%s)
-            echoerr "$cmdname: $URL is available after $((end_ts - start_ts)) seconds"
+            echoinfo "$cmdname: $URL is available after $((end_ts - start_ts)) seconds"
             break
         fi
-        echoerr "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
+        echoinfo "$cmdname: no response after $(($(date +%s) - start_ts)) seconds"
         sleep $RETRY_TIMEOUT
     done
     return $result
